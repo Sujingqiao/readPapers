@@ -32,9 +32,11 @@ y_t = \sum_{s=1}^t \alpha(t,s) v_s, \quad
 \alpha(t,s) = \frac{\exp(q_t \cdot k_s)}{\sum_{s'=1}^t \exp(q_t \cdot k_{s'})}
 $$
 其中：
+$$
 - $ q_t = W_Q x_t $
 - $ k_s = W_K x_s $
 - $ v_s = W_V x_s $
+$$
 
 ### 消元代入：
 $$
