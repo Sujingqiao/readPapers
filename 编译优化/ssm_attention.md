@@ -32,18 +32,18 @@ y_t = \sum_{s=1}^t \alpha(t,s) v_s, \quad
 \alpha(t,s) = \frac{\exp(q_t \cdot k_s)}{\sum_{s'=1}^t \exp(q_t \cdot k_{s'})}
 $$
 其中：
-$$
-- $ q_t = W_Q x_t $
-- $ k_s = W_K x_s $
-- $ v_s = W_V x_s $
-$$
+
+- $$ q_t = W_Q x_t $$
+- $$ k_s = W_K x_s $$
+- $$ v_s = W_V x_s $$
+
 
 ### 消元代入：
 $$
 y_t = \sum_{s=1}^t \frac{\exp\left( (W_Q x_t)^T (W_K x_s) \right)}{\sum_{s'=1}^t \exp\left( (W_Q x_t)^T (W_K x_{s'}) \right)} W_V x_s
 $$
 
-令 $ A = W_K^T W_Q $，则：
+令 $$ A = W_K^T W_Q $$，则：
 $$
 x_t^T A x_s = (W_Q x_t)^T (W_K x_s)
 $$
@@ -130,7 +130,7 @@ $$
 y_t^{(\text{sel-ssm})} = \sum_{s=1}^t C_t A^{t-s} B_s x_s
 $$
 
-权重变为：$ C_t B_s $，依赖 `x_t` 和 `x_s`，形式更接近注意力。
+权重变为：$$ C_t B_s $$，依赖 `x_t` 和 `x_s`，形式更接近注意力。
 
 但仍为**可分离形式**（separable），而注意力是**二次型**，无法完全匹配。
 
