@@ -13,13 +13,14 @@
 ## 2. 前向变量  $\alpha_t(j)$
 
 公式： 
- $$
+
+$$
 \alpha_t(j) = 
 \begin{cases}
 \pi_j b_j(x_1) & t = 1 \
 \left( \sum_i \alpha_{t-1}(i) a_{ij} \right) b_j(x_t) & t > 1
 \end{cases}
- $$
+$$
 
 ```python
 @lru_cache(maxsize=None)
