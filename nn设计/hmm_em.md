@@ -35,6 +35,7 @@ def alpha(t, j):
 ## 3. 后向变量 $\beta_t(i)$
 
 公式：
+
 $$
 \beta_t(i) = 
 \begin{cases}
@@ -55,6 +56,7 @@ def beta(t, i):
 ## 4. 状态后验 $\gamma_t(i)$
 
 公式：
+
 $$
 \gamma_t(i) = \frac{\alpha_t(i) \beta_t(i)}{\sum_j \alpha_t(j) \beta_t(j)}
 $$
