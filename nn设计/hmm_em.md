@@ -13,7 +13,6 @@
 ## 2. 前向变量  $\alpha_t(j)$
 
 公式： 
-
 $$
 \alpha_t(j) = 
 \begin{cases}
