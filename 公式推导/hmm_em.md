@@ -7,6 +7,7 @@
 ## 一、公式区（右对齐编号）
 
 ### (1) 前向变量 $\alpha_t(j)$
+
 $$
 \alpha_t(j) = 
 \begin{cases}
@@ -17,6 +18,7 @@ $$
 $$
 
 ### (2) 后向变量 $\beta_t(i)$
+
 $$
 \beta_t(i) = 
 \begin{cases}
@@ -27,18 +29,21 @@ $$
 $$
 
 ### (3) 状态后验 $\gamma_t(i)$
+
 $$
 \gamma_t(i) = \frac{\alpha_t(i) \beta_t(i)}{\sum_{j=1}^N \alpha_t(j) \beta_t(j)}
 \tag{3}
 $$
 
 ### (4) 转移后验 $\xi_t(i,j)$
+
 $$
 \xi_t(i,j) = \frac{\alpha_t(i) a_{ij} b_j(x_{t+1}) \beta_{t+1}(j)}{P(x)},\quad P(x) = \sum_{k=1}^N \alpha_T(k)
 \tag{4}
 $$
 
 ### (5) 参数更新
+
 $$
 \pi_i^{\text{new}} = \gamma_1(i)
 \tag{5.1}
