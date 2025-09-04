@@ -9,7 +9,7 @@
 ### (1) 前向变量 $\alpha_t(j)$
 
 $$
-\alpha_t(j) = 
+\alpha_{t}(j) = 
 \begin{cases}
 \pi_j b_j(x_1) & t = 1 \\
 \left( \sum_{i=1}^N \alpha_{t-1}(i) a_{ij} \right) b_j(x_t) & t > 1
@@ -20,7 +20,7 @@ $$
 ### (2) 后向变量 $\beta_t(i)$
 
 $$
-\beta_t(i) = 
+\beta_{t}(i) = 
 \begin{cases}
 1 & t = T \\
 \sum_{j=1}^N a_{ij} b_j(x_{t+1}) \beta_{t+1}(j) & t < T
