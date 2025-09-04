@@ -1,11 +1,10 @@
-# 代码区                                          | 说明区（公式/语义）
-# ----------------------------------------------|----------------------------------------
+
 ```python
-D = [[], [], []]                                 #| 𝒟 ← {𝒟₀, 𝒟₁, 𝒟₂}  
-                                                 #| 全局任务池：ded, abd, ind
+D = [[], [], []]                                  #| 𝒟 ← {𝒟₀, 𝒟₁, 𝒟₂}  
+                                                  #| 全局任务池：ded, abd, ind
                                                   
-for b in range(B):                               # | 循环 B 次提案
-    p_seed = random.choice(D[0] + D[1])          # | p ∼ 𝒟_ded ∪ 𝒟_abd
+for b in range(B):                                # | 循环 B 次提案
+    p_seed = random.choice(D[0] + D[1])           # | p ∼ 𝒟_ded ∪ 𝒟_abd
     inputs, method = policy_propose("ind", p_seed)#| (iₙ, oₙ) ← π_propose(p)  
     if validate(inputs):                          #| 验证执行合法性
         D[2].append((p_seed[0], inputs, method))  #| 𝒟_ind ← 𝒟_ind ∪ {(p, trace, m)}
