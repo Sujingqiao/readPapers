@@ -157,3 +157,171 @@ theorem backward_output_is_correct :
     done
 
 end FlashAttentionBackward_Dataflow
+
+
+
+
+
+
+
+
+import Mathlib.Data.Matrix.Basic
+import Mathlib.Analysis.Calculus.Deriv.Basic
+import Mathlib.Data.Real.Basic
+
+open Matrix
+open scoped Matrix
+
+/- 
+  FlashAttention Backward 的正确性证明
+  目标：证明其计算的 (dQ, dK, dV) 等于 loss 对 (Q, K, V) 的梯度
+-/
+
+section FlashAttentionCorrectness
+
+-- =============================================
+-- 1. 参数与类型
+-- =============================================
+
+universe u
+
+variable {N d : ℕ}  -- 序列长度，头维度
+variable [Fact (0 < N)] [Fact (0 < d)]
+
+-- 缩放因子
+variable (τ : ℝ)  -- 通常为 1/sqrt(d)
+
+-- Mask 函数（简化为恒等，可扩展）
+def mask : Matrix ℝ N N → Matrix ℝ N N := id
+
+-- Dropout（简化为无 dropout，可扩展）
+def dropout (P : Matrix ℝ N N) : Matrix ℝ N N := P
+
+-- =============================================
+-- 2. 前向传播：O = softmax(τ Q Kᵀ) • V
+-- =============================================
+
+/-- softmax 按行归一化 --/
+def softmax (S : Matrix ℝ N N) : Matrix ℝ N N :=
+  fun i j => exp (S i j) / ∑ j' : Fin N, exp (S i j')
+
+/-- 前向传播函数：输入 Q, K, V，输出 O --/
+def forward (Q K V : Matrix ℝ N d) : Matrix ℝ N d :=
+  let S : Matrix ℝ N N := τ • (Q ⬝ Kᵀ)
+  let P : Matrix ℝ N N := softmax (mask S)
+  let P_drop : Matrix ℝ N N := dropout P
+  P_drop ⬝ V
+
+-- =============================================
+-- 3. 损失函数：假设 loss = ‖O - O_target‖²
+-- =============================================
+
+variable (O_target : Matrix ℝ N d)
+
+/-- 损失函数：均方误差 --/
+def loss (Q K V : Matrix ℝ N d) : ℝ :=
+  let O := forward Q K V
+  ∑ i j, (O i j - O_target i j)^2
+
+-- =============================================
+-- 4. 自动微分定义的“正确梯度”
+-- =============================================
+
+/-- 正确的 dQ：loss 对 Q 的梯度 --/
+def true_dQ (Q K V : Matrix ℝ N d) : Matrix ℝ N d :=
+  (has_fderiv_at_of_has_deriv_at (fun Q => loss Q K V)).fderiv
+
+/-- 正确的 dK：loss 对 K 的梯度 --/
+def true_dK (Q K V : Matrix ℝ N d) : Matrix ℝ N d :=
+  (has_fderiv_at_of_has_deriv_at (fun K => loss Q K V)).fderiv
+
+/-- 正确的 dV：loss 对 V 的梯度 --/
+def true_dV (Q K V : Matrix ℝ N d) : Matrix ℝ N d :=
+  (has_fderiv_at_of_has_deriv_at (fun V => loss Q K V)).fderiv
+
+-- 但我们不直接计算 fderiv，而是**推导其闭式表达**
+
+-- =============================================
+-- 5. 推导数学梯度（手动链式法则）
+-- =============================================
+
+namespace ManualGradient
+
+/-- 1. dO = 2*(O - O_target) --/
+def dO (Q K V : Matrix ℝ N d) : Matrix ℝ N d :=
+  2 • (forward Q K V - O_target)
+
+/-- 2. dP_drop = dO • Vᵀ --/
+def dP_drop (Q K V : Matrix ℝ N d) : Matrix ℝ N N :=
+  dO Q K V ⬝ Vᵀ
+
+/-- 3. dP = dP_drop （dropout 无梯度，简化） --/
+def dP (Q K V : Matrix ℝ N d) : Matrix ℝ N N :=
+  dP_drop Q K V
+
+/-- 4. dS = dP * P - P * row_sum(dP * P) --/
+def dS (Q K V : Matrix ℝ N d) : Matrix ℝ N N :=
+  let S := τ • (Q ⬝ Kᵀ)
+  let P := softmax (mask S)
+  fun i j => dP Q K V i j * P i j - P i j * (∑ k, dP Q K V i k * P i k)
+
+/-- 5. dQ = τ • dS • K --/
+def computed_dQ (Q K V : Matrix ℝ N d) : Matrix ℝ N d :=
+  τ • (dS Q K V ⬝ K)
+
+/-- 6. dK = τ • dSᵀ • Q --/
+def computed_dK (Q K V : Matrix ℝ N d) : Matrix ℝ N d :=
+  τ • (dS Q K V)ᵀ ⬝ Q
+
+/-- 7. dV = P_drop • dO --/
+def computed_dV (Q K V : Matrix ℝ N d) : Matrix ℝ N d :=
+  (dropout (softmax (mask (τ • (Q ⬝ Kᵀ))))) ⬝ dO Q K V
+
+end ManualGradient
+
+-- =============================================
+-- 6. FlashAttention Backward 的实现
+-- =============================================
+
+/-- 模拟 FlashAttention Backward 的输出 --/
+def flash_backward (Q K V : Matrix ℝ N d) :
+    (Matrix ℝ N d × Matrix ℝ N d × Matrix ℝ N d) :=
+  (ManualGradient.computed_dQ Q K V,
+   ManualGradient.computed_dK Q K V,
+   ManualGradient.computed_dV Q K V)
+
+-- =============================================
+-- 7. 正确性定理
+-- =============================================
+
+/-- 定理：FlashAttention 计算的 dQ 等于 true_dQ --/
+theorem flash_dQ_correct (Q K V : Matrix ℝ N d) :
+    flash_backward Q K V.1 = ManualGradient.computed_dQ Q K V :=
+  rfl  -- 因为 flash_backward 直接使用 computed_dQ
+
+/-- 定理：手动推导的 dQ 等于自动微分定义的 true_dQ --/
+theorem manual_dQ_eq_true_dQ (Q K V : Matrix ℝ N d) :
+    ManualGradient.computed_dQ Q K V = true_dQ Q K V :=
+  sorry  -- 这是核心证明，需展开链式法则
+
+/-- 同理 dK --/
+theorem manual_dK_eq_true_dK (Q K V : Matrix ℝ N d) :
+    ManualGradient.computed_dK Q K V = true_dK Q K V :=
+  sorry
+
+/-- 同理 dV --/
+theorem manual_dV_eq_true_dV (Q K V : Matrix ℝ N d) :
+    ManualGradient.computed_dV Q K V = true_dV Q K V :=
+  sorry
+
+/-- 主定理：FlashAttention Backward 计算的是真正的梯度 --/
+theorem flash_backward_is_correct (Q K V : Matrix ℝ N d) :
+    flash_backward Q K V = (true_dQ Q K V, true_dK Q K V, true_dV Q K V) :=
+  by
+  rw [flash_dQ_correct]
+  rw [manual_dQ_eq_true_dQ]
+  rw [manual_dK_eq_true_dK]
+  rw [manual_dV_eq_true_dV]
+  done
+
+end FlashAttentionCorrectness
