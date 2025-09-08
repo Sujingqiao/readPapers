@@ -1,0 +1,75 @@
+import Mathlib
+import Mathlib.Combinatorics.SimpleGraph
+import Mathlib.Probability.ProbabilityMassFunction -- 离散概率
+import Mathlib.Data.Fintype.Basic
+
+open SimpleGraph
+
+-- 1. 定义变量类型（假设离散、有限）
+abbrev Var := Fin 10 -- 10个变量，编号0-9。实际中可用字符串或自定义类型。
+
+-- 2. 定义贝叶斯网络的图结构（有向无环图）
+-- 在 Mathlib 中，SimpleGraph 默认是无向的。我们需要有向图。
+-- Mathlib 有 `Quiver`（广义有向图），但更常用的是直接定义边集。
+structure DirectedGraph (V : Type) where
+  edges : V → V → Prop -- edges i j 表示存在边 i → j
+  is_irreflexive : ∀ v, ¬ edges v v -- 无自环（可选，但DAG通常无自环）
+  is_acyclic : True -- 简化：假设无环。真实形式化需定义“无环”并证明。这是难点！
+
+-- 3. 定义变量的取值域（假设所有变量取值于同一个有限类型，简化）
+abbrev Value := Bool -- 例如，布尔变量
+instance : Fintype Value where
+  fintype := inferInstance -- Bool 本身是 Fintype
+
+-- 4. 定义条件概率分布 (CPD)
+-- 对于节点 v，其 CPD 依赖于其父节点的取值。
+-- parents_vals : 从父节点到其取值的映射
+-- 返回一个 PMF，表示在给定父节点取值下，v 的概率分布。
+def CPD (G : DirectedGraph Var) (v : Var) :=
+  (parents_vals : {p : Var | G.edges p v} → Value) → PMF Value
+-- 注意：{p : Var | G.edges p v} 是 v 的父节点集合（子类型）。由于 Var 是 Fin n，这个集合是有限的。
+
+-- 5. 定义贝叶斯网络结构
+structure BayesianNetwork where
+  graph : DirectedGraph Var
+  cpds : (v : Var) → CPD graph v -- 为每个节点提供一个 CPD
+
+-- 6. 定义联合概率分布
+-- 给定一个完整的变量赋值 (assignment: Var → Value)，计算其联合概率。
+def joint_prob (bn : BayesianNetwork) (assignment : Var → Value) : ℝ :=
+  ∏ v : Var,
+    let parents_vals := fun (p : {p : Var | bn.graph.edges p v}) => assignment p
+    (bn.cpds v parents_vals) (assignment v) -- 获取 PMF 在 assignment v 处的概率值
+-- 注意：PMF α 是一个从 α 到 ℝ 的函数，满足非负且和为1。所以 (pmf x) 就是概率值。
+
+-- 7. 核心性质：联合概率非负且和为1
+-- 性质1：非负性
+theorem joint_prob_nonneg
+    (bn : BayesianNetwork)
+    (assignment : Var → Value)
+    :
+    0 ≤ joint_prob bn assignment := by
+  -- 乘积的每一项 (bn.cpds v parents_vals) (assignment v) 都 ≥ 0，因为它是 PMF 的值。
+  -- Mathlib 中有 PMF 非负的定理：PMF.NonNeg
+  simp [joint_prob]
+  apply Finset.prod_nonneg -- 有限乘积的非负性
+  intro v
+  apply PMF.nonneg -- 应用 PMF 的非负性定理
+
+-- 性质2：归一化（所有可能赋值的概率之和为1）
+-- 这是贝叶斯网络定义的核心！
+theorem joint_prob_normalization
+    (bn : BayesianNetwork)
+    :
+    ∑ (assignment : Var → Value) in Fintype.finset (Var → Value), joint_prob bn assignment = 1 := by
+  -- 这个证明相对复杂，需要用到“按拓扑序分解求和”的思想。
+  -- 由于图是 DAG，存在拓扑排序。我们可以按拓扑序对变量求和。
+  -- 伪证明步骤：
+  -- 1. 对拓扑序中的第一个变量 v1 求和：∑_{val1} P(v1) = 1。
+  -- 2. 对第二个变量 v2 求和：∑_{val2} P(v2 | parents(v2))。由于 parents(v2) 只能是 v1（或空），且 v1 已求和，∑_{val2} P(v2 | val1) = 1，所以整体贡献为 1 * 1。
+  -- 3. 依此类推。
+  -- 在 Lean 中，这需要：
+  --   a) 形式化 DAG 的拓扑排序。
+  --   b) 使用 Fubini 定理（或离散版本的求和交换）按拓扑序重排求和。
+  --   c) 逐步化简，利用每个 CPD 的归一化性质 (∑_{val} P(val | parents_vals) = 1)。
+  sorry -- 这是一个非平凡的证明，需要大量前置工作。
