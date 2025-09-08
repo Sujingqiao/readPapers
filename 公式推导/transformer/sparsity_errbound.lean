@@ -86,3 +86,69 @@ def floatImplementationApprox (ε : ℝ)
                               (floatImpl : Vec n → Vec m) : Prop :=
   ∀ x, vecApprox ε (floatImpl x) (ideal x) 
 
+
+
+
+
+theorem softmax_float_error_bound 
+    (x : Vec TokenCount) 
+    (x_float : Vec TokenCount) 
+    (ε_input : ℝ) 
+    (h_input : vecApprox ε_input x x_float) 
+    (ε_op : ℝ)  -- 单次浮点操作误差界
+    : ∃ ε_total, 
+        vecApprox ε_total (softmax x) (floatSoftmax x_float) ∧ 
+        ε_total ≤ some_function ε_input ε_op := by
+  -- 证明思路：
+  -- softmax 包含 exp, sum, div
+  -- 每个操作有舍入误差
+  -- 利用 Lipschitz 连续性：softmax 是 Lipschitz 的！
+
+  -- 已知：softmax 是 1-Lipschitz（在 ∞-范数下？需查）
+  -- 更准确：softmax 的 Jacobian 有界
+
+  -- 简化：假设 exp 和 sum 的误差可控
+  have h_exp_error : ∀ i, |Real.exp (x i) - floatExp (x_float i)| ≤ δ₁ := by
+    -- 浮点 exp 误差界
+    sorry
+
+  have h_sum_error : |∑ i, Real.exp (x i) - floatSum (fun i => floatExp (x_float i))| ≤ δ₂ := by
+    -- 浮点求和误差（与 n 有关）
+    sorry
+
+  -- 最终 softmax 每个分量误差可界为：
+  -- |softmax(x)_i - floatSoftmax(x_float)_i| ≤ L * ε_input + C * (δ₁ + δ₂)
+  -- 其中 L 是 softmax 的 Lipschitz 常数
+
+  -- 实际中 L ≤ 1（在某些范数下）
+  use ε_input + 2 * ε_op * Fintype.card TokenCount  -- 粗略上界
+  constructor
+  · intro i
+    -- 逐点误差分析
+    admit
+  · trivial
+
+
+
+
+theorem transformer_forward_float_error_bound 
+    (model : TransformerModel)
+    (x : TokenCountEnc → VocabSize)
+    (x_float : TokenCountEnc → VocabSize)  -- 浮点输入
+    (ε_per_layer : ℝ)
+    : ∃ ε_total,
+        let ideal_out := transformerForward model x
+        let float_out  := floatTransformerForward model x_float
+        vecApprox ε_total ideal_out float_out ∧
+        ε_total ≤ ε_per_layer * (num_layers model) := by
+  -- 证明思路：误差逐层传播
+  -- 每层（Attention, FFN, LayerNorm）都是 Lipschitz 映射
+  -- 总误差 ≈ 每层误差之和
+
+  -- 假设每层满足：
+  --   ||f(x) - f_float(x_float)|| ≤ L * ||x - x_float|| + ε_local
+
+  -- 则总误差可递推界出
+
+  -- 此处可形式化 LayerNorm、Linear、GELU 的 Lipschitz 常数
+  admit
